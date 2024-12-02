@@ -72,6 +72,7 @@ public struct ConfigurationParameters {
     var startDate: Date
     /// The end-date boundary of your calendar
     var endDate: Date
+    var anchorDate: Date?
     /// Number of rows you want to calendar to display per date section
     var numberOfRows: Int
     /// Your calendar() Instance
@@ -90,12 +91,14 @@ public struct ConfigurationParameters {
     /// init-function
     public init(startDate: Date,
                 endDate: Date,
+                anchorDate: Date? = nil,
                 numberOfRows: Int = 6,
                 calendar: Calendar = Calendar.current,
                 generateInDates: InDateCellGeneration = .forAllMonths,
                 generateOutDates: OutDateCellGeneration = .tillEndOfGrid,
                 firstDayOfWeek: DaysOfWeek? = nil,
                 hasStrictBoundaries: Bool? = nil) {
+        self.anchorDate = anchorDate
         self.startDate = startDate
         self.endDate = endDate
 
@@ -175,6 +178,8 @@ public struct Month {
 
     // Return the total number of days for the represented month
     public let numberOfDaysInMonth: Int
+    
+    var shift: Int = 0
 
     // Return the total number of day cells
     // to generate for the represented month
@@ -192,7 +197,7 @@ public struct Month {
         let externalSection = sectionInfo.externalSection
         let internalSection = sectionInfo.internalSection
         let dateOfStartIndex = sections[0..<internalSection].reduce(0, +) - inDates + 1
-        let itemIndex = number - dateOfStartIndex
+        let itemIndex = number - dateOfStartIndex - shift
 
         return IndexPath(item: itemIndex, section: externalSection)
     }
@@ -285,7 +290,14 @@ class JTAppleDateConfigGenerator {
                     var numberOfPreDatesForThisMonth = 0
                     let predatesGeneration = parameters.generateInDates
                     if predatesGeneration != .off {
-                        numberOfPreDatesForThisMonth = numberOfInDatesForMonth(currentMonthDate, firstDayOfWeek: parameters.firstDayOfWeek, calendar: parameters.calendar)
+                        if predatesGeneration == .tillEndOfRow {
+                            numberOfPreDatesForThisMonth = numberOfInDatesForMonthInCurrentWeek(parameters.anchorDate ?? currentMonthDate,
+                                                                                                currentMonthDate: currentMonthDate,
+                                                                                                firstDayOfWeek: parameters.firstDayOfWeek,
+                                                                                                calendar: parameters.calendar)
+                        } else {
+                            numberOfPreDatesForThisMonth = numberOfInDatesForMonth(currentMonthDate, firstDayOfWeek: parameters.firstDayOfWeek, calendar: parameters.calendar)
+                        }
                         numberOfDaysInMonthVariable += numberOfPreDatesForThisMonth
                         if predatesGeneration == .forFirstMonthOnly && monthIndex != 0 {
                             numberOfDaysInMonthVariable -= numberOfPreDatesForThisMonth
@@ -328,6 +340,12 @@ class JTAppleDateConfigGenerator {
                         numberOfDaysInMonthVariable -= numberOfDaysInCurrentSection
                         section += 1
                     }
+                    var shift: Int = 0
+                    if let anchorDate: Date = parameters.anchorDate,
+                       parameters.calendar.component(.month, from: anchorDate) == parameters.calendar.component(.month, from: currentMonthDate),
+                       parameters.calendar.component(.year, from: anchorDate) == parameters.calendar.component(.year, from: currentMonthDate) {
+                        shift = parameters.calendar.component(.day, from: anchorDate) - 1
+                    }
                     monthArray.append(Month(
                         index: monthIndex,
                         startDayIndex: startIndexForMonth,
@@ -338,7 +356,8 @@ class JTAppleDateConfigGenerator {
                         sectionIndexMaps: sectionIndexMaps,
                         rows: numberOfRowsToGenerateForCurrentMonth,
                         name: allMonthsOfYear[monthNameIndex],
-                        numberOfDaysInMonth: numberOfDaysInMonthFixed
+                        numberOfDaysInMonth: numberOfDaysInMonthFixed,
+                        shift: parameters.generateInDates == .tillEndOfRow ? shift : 0
                     ))
                     startIndexForMonth += numberOfDaysInMonthFixed
                     startCellIndexForMonth += numberOfDaysInMonthFixed + numberOfPreDatesForThisMonth + numberOfPostDatesForThisMonth
@@ -369,6 +388,24 @@ class JTAppleDateConfigGenerator {
         // push it modularly so that we take it back one day so that the
         // first day is Monday instead of Sunday which is the default
         return (firstWeekdayOfMonthIndex + firstDayCalValue) % maxNumberOfDaysInWeek
+    }
+    
+    private func numberOfInDatesForMonthInCurrentWeek(_ date: Date, currentMonthDate: Date, firstDayOfWeek: DaysOfWeek, calendar: Calendar) -> Int {
+        let anchorDateMonth: Int = calendar.component(.month, from: date)
+        let anchorDateWeek: Int = calendar.component(.weekOfMonth, from: date)
+        let currentDateMonth: Int = calendar.component(.month, from: currentMonthDate)
+        let currentDateWeek: Int = calendar.component(.weekOfMonth, from: currentMonthDate)
+        if anchorDateMonth == currentDateMonth && (anchorDateWeek != currentDateWeek || calendar.component(.weekday, from: date) == 2) { return 0 }
+        return numberOfInDatesForMonth(currentMonthDate,
+                                       firstDayOfWeek: firstDayOfWeek,
+                                       calendar: calendar)
+    }
+    
+    private func numberOfDays(before date: Date, currentMonthDate: Date, calendar: Calendar) -> Int {
+        let anchorDateMonth: Int = calendar.component(.month, from: date)
+        let currentDateMonth: Int = calendar.component(.month, from: currentMonthDate)
+        guard anchorDateMonth == currentDateMonth else { return 0 }
+        return calendar.component(.day, from: date) - 1
     }
 }
 

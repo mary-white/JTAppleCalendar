@@ -149,14 +149,14 @@ extension JTACMonthView {
         // Set the new cache
         _cachedConfiguration = validConfig
         
-        if let
-            startMonth = calendar.startOfMonth(for: validConfig.startDate),
-            let endMonth = calendar.endOfMonth(for: validConfig.endDate) {
+        if let startMonth = calendar.startOfMonth(for: validConfig.startDate),
+           let endMonth = calendar.endOfMonth(for: validConfig.endDate) {
             startOfMonthCache = startMonth
             endOfMonthCache   = endMonth
             // Create the parameters for the date format generator
             let parameters = ConfigurationParameters(startDate: startOfMonthCache,
                                                      endDate: endOfMonthCache,
+                                                     anchorDate: optionalConfig?.anchorDate,
                                                      numberOfRows: validConfig.numberOfRows,
                                                      calendar: calendar,
                                                      generateInDates: validConfig.generateInDates,

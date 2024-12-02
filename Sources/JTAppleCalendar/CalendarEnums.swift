@@ -48,7 +48,7 @@ public enum InDateCellGeneration {
     /// forFirstMonthOnly will generate dates for the first month only
     /// forAllMonths will generate dates for all months
     /// off setting will generate no dates
-    case forFirstMonthOnly, forAllMonths, off
+    case forFirstMonthOnly, forAllMonths, off, tillEndOfRow
 }
 
 /// Describes the calendar reading direction

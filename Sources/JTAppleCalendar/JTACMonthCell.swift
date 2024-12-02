@@ -113,7 +113,7 @@ open class JTACCellMonthView: UIView {
     
     private func dateFromIndex(_ index: Int, month: Month, startOfMonthCache: Date, endOfMonthCache: Date) -> (date: Date, owner: DateOwner)? { // Returns nil if date is out of scope
         // Calculate the offset
-        let offSet = month.inDates
+        let offSet = month.inDates - month.shift
         
         let dayIndex = month.startDayIndex + index - offSet
         var dateOwner: DateOwner
