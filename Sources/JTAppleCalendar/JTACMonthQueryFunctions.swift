@@ -416,9 +416,9 @@ extension JTACMonthView {
         var numberOfDaysToAddToOffset: Int = 0
         switch monthData.sectionIndexMaps[indexPath.section]! {
         case 0:
-            offSet = monthData.inDates
+            offSet = monthData.inDates - monthData.shift
         default:
-            offSet = 0
+            offSet = -monthData.shift
             let currentSectionIndexMap = monthData.sectionIndexMaps[indexPath.section]!
             numberOfDaysToAddToOffset = monthData.sections[0..<currentSectionIndexMap].reduce(0, +)
             numberOfDaysToAddToOffset -= monthData.inDates
